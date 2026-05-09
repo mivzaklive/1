@@ -1,0 +1,375 @@
+/* Salon Manager Admin Styles */
+:root {
+    --salon-primary: #8B4B8B;
+    --salon-primary-light: #b07ab0;
+    --salon-primary-dark: #6a3569;
+    --salon-accent: #f8bbd0;
+    --salon-success: #27ae60;
+    --salon-warning: #f39c12;
+    --salon-danger: #e74c3c;
+    --salon-bg: #fdf6fd;
+    --salon-card-bg: #fff;
+    --salon-border: #e8d5e8;
+    --salon-text: #333;
+    --salon-text-light: #666;
+    --salon-shadow: 0 2px 12px rgba(139,75,139,0.1);
+}
+
+.salon-wrap {
+    max-width: 1400px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    color: var(--salon-text);
+    background: var(--salon-bg);
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Page Title */
+.salon-page-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--salon-primary-dark);
+    margin: 0 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.salon-page-title .dashicons { font-size: 28px; width: 28px; height: 28px; color: var(--salon-primary); }
+.salon-page-title .page-title-action {
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--salon-primary);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    text-decoration: none;
+    margin-right: 12px;
+}
+.salon-page-title .page-title-action:hover { background: var(--salon-primary-dark); }
+
+/* Cards */
+.salon-card {
+    background: var(--salon-card-bg);
+    border: 1px solid var(--salon-border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--salon-shadow);
+}
+.salon-card-warning { border-left: 4px solid var(--salon-warning); border-right: none; }
+.salon-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.salon-card-header h2 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--salon-primary-dark);
+    margin: 0;
+}
+
+/* Stats Grid */
+.salon-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.salon-stat-card {
+    background: var(--salon-card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--salon-shadow);
+    border: 1px solid var(--salon-border);
+}
+.salon-stat-icon .dashicons {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+    color: var(--salon-primary);
+}
+.salon-stat-today .dashicons { color: #3498db; }
+.salon-stat-month .dashicons { color: #9b59b6; }
+.salon-stat-revenue .dashicons { color: var(--salon-success); }
+.salon-stat-customers .dashicons { color: var(--salon-warning); }
+.salon-stat-info { display: flex; flex-direction: column; }
+.salon-stat-number { font-size: 28px; font-weight: 700; line-height: 1.1; color: var(--salon-primary-dark); }
+.salon-stat-label { font-size: 13px; color: var(--salon-text-light); margin-top: 2px; }
+
+/* Dashboard Grid */
+.salon-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+@media (max-width: 900px) { .salon-dashboard-grid { grid-template-columns: 1fr; } }
+
+/* Quick Actions */
+.salon-quick-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+.salon-quick-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--salon-primary);
+    color: #fff;
+    border-radius: 8px;
+    padding: 10px 18px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+.salon-quick-btn:hover { background: var(--salon-primary-dark); color: #fff; }
+.salon-quick-btn .dashicons { font-size: 18px; width: 18px; height: 18px; }
+
+/* Tables */
+.salon-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+.salon-table th {
+    background: #f7f0f7;
+    color: var(--salon-primary-dark);
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 2px solid var(--salon-border);
+    white-space: nowrap;
+}
+.salon-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0e8f0;
+    vertical-align: middle;
+}
+.salon-table tr:hover td { background: #fdf4fd; }
+.salon-table a { color: var(--salon-primary-dark); text-decoration: none; }
+.salon-table a:hover { color: var(--salon-primary); text-decoration: underline; }
+
+.salon-row-completed td { opacity: 0.7; }
+.salon-row-cancelled td { opacity: 0.5; text-decoration: line-through; }
+
+/* Badges */
+.salon-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.salon-badge-scheduled { background: #e3f2fd; color: #1565c0; }
+.salon-badge-completed { background: #e8f5e9; color: #2e7d32; }
+.salon-badge-cancelled { background: #ffebee; color: #c62828; }
+.salon-badge-no_show   { background: #fff3e0; color: #e65100; }
+
+/* Status badge actions */
+.button-success {
+    background: var(--salon-success) !important;
+    border-color: #219a52 !important;
+    color: #fff !important;
+}
+.button-success:hover { background: #219a52 !important; }
+
+/* Toolbar */
+.salon-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    background: #fff;
+    border: 1px solid var(--salon-border);
+    border-radius: 10px;
+    padding: 14px 18px;
+}
+.salon-view-switcher { display: flex; gap: 4px; }
+.salon-date-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.salon-current-date {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--salon-primary-dark);
+    min-width: 160px;
+    text-align: center;
+}
+.salon-date-picker { padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+/* Month Grid */
+.salon-month-grid { background: #fff; border: 1px solid var(--salon-border); border-radius: 12px; overflow: hidden; }
+.salon-month-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: var(--salon-primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+}
+.salon-month-dow { padding: 10px; text-align: center; }
+.salon-month-body {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+.salon-month-cell {
+    min-height: 90px;
+    border: 1px solid #f0e8f0;
+    padding: 4px;
+    vertical-align: top;
+    font-size: 12px;
+}
+.salon-empty-cell { background: #fafafa; }
+.salon-today { background: #fef9ff; border-color: var(--salon-primary) !important; }
+.salon-month-day-num a {
+    display: inline-block;
+    font-weight: 600;
+    color: var(--salon-text);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 2px 4px;
+    border-radius: 50%;
+    min-width: 24px;
+    text-align: center;
+}
+.salon-today .salon-month-day-num a {
+    background: var(--salon-primary);
+    color: #fff;
+}
+.salon-month-appt {
+    background: var(--salon-accent);
+    color: var(--salon-primary-dark);
+    border-radius: 3px;
+    padding: 2px 5px;
+    margin-top: 2px;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.salon-status-completed { background: #e8f5e9; color: #2e7d32; }
+.salon-status-cancelled { background: #ffebee; color: #c62828; }
+
+/* Forms */
+.salon-form-card { max-width: 800px; }
+.salon-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+    margin-bottom: 24px;
+}
+@media (max-width: 600px) { .salon-form-grid { grid-template-columns: 1fr; } }
+.salon-form-full { grid-column: 1 / -1; }
+.salon-form-group { display: flex; flex-direction: column; gap: 5px; }
+.salon-form-group label { font-weight: 600; font-size: 13px; color: var(--salon-text); }
+.salon-form-group input, .salon-form-group textarea, .salon-form-group select {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.salon-form-group input:focus, .salon-form-group select:focus {
+    border-color: var(--salon-primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(139,75,139,0.15);
+}
+.salon-select { max-width: 100%; }
+.salon-input { max-width: 180px; }
+.salon-input-small { max-width: 100px; }
+.salon-select-small { max-width: 130px; }
+.salon-form-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 8px; }
+.salon-link-small { font-size: 12px; color: var(--salon-primary); }
+
+/* Customer stats */
+.salon-stats-mini {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.salon-stat-mini {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f7f0f7;
+    border-radius: 10px;
+    padding: 14px 20px;
+    min-width: 90px;
+}
+.salon-stat-num { font-size: 20px; font-weight: 700; color: var(--salon-primary-dark); }
+.salon-stat-lbl { font-size: 12px; color: var(--salon-text-light); margin-top: 3px; }
+.salon-stat-debt .salon-stat-num { color: var(--salon-danger); }
+
+.salon-debt { color: var(--salon-danger); font-weight: 600; }
+.salon-amount { color: var(--salon-success); font-weight: 600; }
+.salon-time { font-weight: 600; color: var(--salon-primary-dark); }
+
+.salon-debt-alert {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.salon-inline-form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 10px;
+}
+
+/* Customer grid */
+.salon-customer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+@media (max-width: 900px) { .salon-customer-grid { grid-template-columns: 1fr; } }
+.salon-info-table { width: 100%; border-collapse: collapse; }
+.salon-info-table th { width: 35%; font-weight: 600; color: var(--salon-text-light); padding: 8px 0; text-align: right; }
+.salon-info-table td { padding: 8px 0; border-bottom: 1px solid #f0e8f0; }
+
+.salon-customer-actions-top { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+
+/* Search */
+.salon-search-bar { margin-bottom: 16px; }
+.salon-search-input { width: 280px; padding: 7px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+
+/* Misc */
+.salon-empty { color: var(--salon-text-light); font-style: italic; padding: 20px 0; }
+.salon-actions { white-space: nowrap; }
+.salon-notes-preview { color: var(--salon-text-light); font-size: 13px; }
+.salon-back-btn { margin-bottom: 16px; display: inline-block; }
+.salon-days-grid { display: flex; gap: 14px; flex-wrap: wrap; }
+.salon-day-label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-weight: normal; }
+
+/* Loading spinner */
+.salon-loading { opacity: 0.6; pointer-events: none; }
+
+/* WordPress admin form-table compatibility */
+.salon-wrap .form-table th { padding: 16px 10px; text-align: right; }
+.salon-wrap .form-table td { padding: 12px 10px; }
