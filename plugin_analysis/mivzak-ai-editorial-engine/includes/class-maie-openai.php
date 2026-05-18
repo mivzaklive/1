@@ -45,7 +45,7 @@ final class MAIE_OpenAI
             $payload['tools'] = $tools;
         }
 
-        if (!empty($options['reasoning_effort'])) {
+        if (!empty($options['reasoning_effort']) && self::model_supports_reasoning($model)) {
             $payload['reasoning'] = ['effort' => sanitize_key((string) $options['reasoning_effort'])];
         }
 
@@ -142,7 +142,7 @@ final class MAIE_OpenAI
             ],
         ];
 
-        if (!empty($options['reasoning_effort'])) {
+        if (!empty($options['reasoning_effort']) && self::model_supports_reasoning($model)) {
             $payload['reasoning'] = ['effort' => sanitize_key((string) $options['reasoning_effort'])];
         }
 
@@ -391,6 +391,12 @@ final class MAIE_OpenAI
         }
 
         return '';
+    }
+
+    // רק מודלי o-series (o1, o3, o4...) תומכים בפרמטר reasoning.effort
+    private static function model_supports_reasoning(string $model): bool
+    {
+        return (bool) preg_match('/^o\d/i', $model);
     }
 
     public static function extract_output_text(array $json): string
