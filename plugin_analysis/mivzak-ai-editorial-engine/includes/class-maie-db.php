@@ -503,6 +503,27 @@ final class MAIE_DB
         return is_array($rows) ? array_filter(array_map('strval', $rows)) : [];
     }
 
+    // רק נושאים שהשתלמו בפועל ונשמרו כפוסטים – לבדיקת כפילויות בלבד
+    public static function recent_published_job_topics(int $profile_id, int $days = 14, int $limit = 40): array
+    {
+        global $wpdb;
+        $table = self::jobs_table();
+        $days = max(1, min(60, $days));
+        $limit = max(1, min(100, $limit));
+        $after = gmdate('Y-m-d H:i:s', time() - DAY_IN_SECONDS * $days);
+
+        $rows = $wpdb->get_col($wpdb->prepare(
+            "SELECT topic_title FROM {$table}
+             WHERE profile_id = %d AND topic_title <> '' AND status = 'completed' AND created_at >= %s
+             ORDER BY id DESC LIMIT %d",
+            $profile_id,
+            get_date_from_gmt($after),
+            $limit
+        ));
+
+        return is_array($rows) ? array_filter(array_map('strval', $rows)) : [];
+    }
+
     public static function daily_completed_count(int $profile_id): int
     {
         global $wpdb;

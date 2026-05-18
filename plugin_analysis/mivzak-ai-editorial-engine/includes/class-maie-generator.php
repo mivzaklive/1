@@ -123,8 +123,9 @@ final class MAIE_Generator
             'payload' => $payload,
         ]);
 
-        if (self::is_duplicate_topic($topic_title, $profile)) {
-            self::skip_job($job_id, 'duplicate_topic', 'הנושא דומה מדי לכתבה או למשימה קודמת.', $payload);
+        $dup_topic = self::find_duplicate_topic($topic_title, $profile);
+        if ($dup_topic !== '') {
+            self::skip_job($job_id, 'duplicate_topic', 'הנושא דומה מדי לכתבה קיימת: "' . $dup_topic . '"', $payload);
             return;
         }
 
@@ -150,8 +151,9 @@ final class MAIE_Generator
             return;
         }
 
-        if (self::is_duplicate_topic($title, $profile)) {
-            self::skip_job($job_id, 'duplicate_title', 'הכותרת המוצעת דומה מדי לכתבה קיימת.', $payload);
+        $dup_title = self::find_duplicate_topic($title, $profile);
+        if ($dup_title !== '') {
+            self::skip_job($job_id, 'duplicate_title', 'הכותרת המוצעת דומה מדי לכתבה קיימת: "' . $dup_title . '"', $payload);
             return;
         }
 
@@ -630,14 +632,16 @@ PROMPT;
         return $lines ? implode("\n", $lines) : '- אין כותרות רלוונטיות מהשבוע האחרון.';
     }
 
-    private static function is_duplicate_topic(string $candidate, array $profile): bool
+    // מחזירה את הכותרת שגרמה לזיהוי ככפילות, או מחרוזת ריקה אם אין כפילות.
+    // בודקת רק מול פוסטים פורסמו ומשימות שהושלמו – לא מול משימות שנכשלו/דולגו.
+    private static function find_duplicate_topic(string $candidate, array $profile): string
     {
         $candidate_norm = self::normalize_for_similarity($candidate);
         if ($candidate_norm === '') {
-            return false;
+            return '';
         }
 
-        $existing = [];
+        $existing_map = [];
         $category_id = absint($profile['category_id'] ?? 0);
         if ($category_id > 0) {
             $posts = get_posts([
@@ -647,38 +651,42 @@ PROMPT;
                 'orderby' => 'date',
                 'order' => 'DESC',
                 'category' => $category_id,
-                'date_query' => [
-                    [
-                        'after' => '10 days ago',
-                        'inclusive' => true,
-                    ],
-                ],
+                'date_query' => [['after' => '10 days ago', 'inclusive' => true]],
             ]);
             foreach ($posts as $post) {
                 if ($post instanceof WP_Post) {
-                    $existing[] = get_the_title($post);
+                    $t = get_the_title($post);
+                    $existing_map[$t] = $t;
                 }
             }
         }
 
-        $existing = array_merge($existing, MAIE_DB::recent_job_topics(absint($profile['id'] ?? 0), 10, 40));
-        foreach ($existing as $title) {
-            $existing_norm = self::normalize_for_similarity((string) $title);
+        // בדיקה מול משימות שהושלמו בלבד (לא נכשלות/דולגות)
+        foreach (MAIE_DB::recent_published_job_topics(absint($profile['id'] ?? 0), 14, 40) as $t) {
+            $existing_map[$t] = $t;
+        }
+
+        foreach ($existing_map as $original => $unused) {
+            $existing_norm = self::normalize_for_similarity((string) $original);
             if ($existing_norm === '') {
                 continue;
             }
             similar_text($candidate_norm, $existing_norm, $percent);
-            if ($percent >= 78.0) {
-                return true;
+            // 85% – סף גבוה יותר כדי להפחית false-positives בכותרות חדשותיות בעברית
+            if ($percent >= 85.0) {
+                return (string) $original;
             }
-            if (str_contains($existing_norm, $candidate_norm) || str_contains($candidate_norm, $existing_norm)) {
-                if (mb_strlen($candidate_norm, 'UTF-8') >= 18 && mb_strlen($existing_norm, 'UTF-8') >= 18) {
-                    return true;
-                }
+            // בדיקת הכלה – רק למחרוזות ארוכות משמעותית
+            if (
+                mb_strlen($candidate_norm, 'UTF-8') >= 22 &&
+                mb_strlen($existing_norm, 'UTF-8') >= 22 &&
+                (str_contains($existing_norm, $candidate_norm) || str_contains($candidate_norm, $existing_norm))
+            ) {
+                return (string) $original;
             }
         }
 
-        return false;
+        return '';
     }
 
     private static function normalize_for_similarity(string $text): string
