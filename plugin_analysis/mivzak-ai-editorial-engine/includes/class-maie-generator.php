@@ -83,26 +83,10 @@ final class MAIE_Generator
             return;
         }
 
-        $content_mode = sanitize_key((string) ($profile['content_mode'] ?? 'news'));
-        if ($content_mode === 'news') {
-            $selected_window_hours = max(1, absint($profile['search_window_hours'] ?? 12));
-            $estimated_age_hours = isset($topic['estimated_event_age_hours']) ? (float) $topic['estimated_event_age_hours'] : 999999.0;
-
-            // מאפשר גמישות של 50% מעבר לחלון: אירוע שגילו עד 1.5x החלון עדיין תקין.
-            // סיפורים מתמשכים (מתחים, מלחמות) מקבלים "אומדן גיל" גבוה על ידי המודל
-            // גם כשיש פיתוח חדש — לכן הגבול הוא 1.5x ולא 1x.
-            if ($estimated_age_hours > $selected_window_hours * 1.5) {
-                self::skip_job(
-                    $job_id,
-                    'topic_outside_search_window',
-                    sprintf('הנושא נפסל: גיל ההתפתחות המשוער (%.0f ש׳) חורג מ-1.5x חלון הזמן (%d ש׳).', $estimated_age_hours, $selected_window_hours),
-                    $payload
-                );
-                return;
-            }
-            // הערה: freshness_confidence נשאר מידע לצרכי לוג/debug בלבד.
-            // אם המודל החזיר status='ok' זה מספיק — הוא מוסמך לשפוט טריות.
-        }
+        // estimated_event_age_hours נשמר ב-payload לצרכי debug בלבד.
+        // המודל כבר שפט טריות בתוך שלב המחקר (status='ok') — אין צורך בשער PHP כפול.
+        // עבור סיפורים מתמשכים (מתחים, מלחמות, משברים) המודל מחזיר גיל גבוה של
+        // הסיפור הרחב ולא של הפיתוח הספציפי, לכן כל בדיקת סף כאן מייצרת false positives.
 
         $topic_title = sanitize_text_field((string) ($topic['topic_title'] ?? ''));
         if ($topic_title === '') {
