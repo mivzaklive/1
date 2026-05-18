@@ -84,10 +84,10 @@ final class MAIE_Generator
         }
 
         // שער גיל: estimated_event_age_hours מדווח כגיל הידיעה הספציפית (לא הסיפור הרחב).
-        // הכפלה ב-3 מאפשרת אירועים עד 36 ש' לחלון 12 ש', תוך סינון ידיעות ישנות באמת.
+        // מכפיל 6× — לחלון 12 ש' מאפשר עד 72 ש' (3 ימים); ידיעות מעל שבוע (168+ ש') נחסמות.
         $profile_window = max(1, absint($profile['search_window_hours'] ?? 12));
         $age_hours = (float) ($topic['estimated_event_age_hours'] ?? 0);
-        if ($age_hours > $profile_window * 3) {
+        if ($age_hours > $profile_window * 6) {
             $age_label_gate = round($age_hours, 1);
             self::skip_job($job_id, 'event_too_old', "הנושא נפסל: גיל הידיעה הספציפית ({$age_label_gate} ש׳) חורג מחלון הזמן של {$profile_window} שעות. יש לחפש פיתוח חדש יותר.", $payload);
             return;
