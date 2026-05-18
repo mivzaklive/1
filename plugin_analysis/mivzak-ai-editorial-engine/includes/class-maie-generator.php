@@ -87,27 +87,21 @@ final class MAIE_Generator
         if ($content_mode === 'news') {
             $selected_window_hours = max(1, absint($profile['search_window_hours'] ?? 12));
             $estimated_age_hours = isset($topic['estimated_event_age_hours']) ? (float) $topic['estimated_event_age_hours'] : 999999.0;
-            $freshness_confidence = sanitize_key((string) ($topic['freshness_confidence'] ?? 'low'));
 
-            if ($estimated_age_hours > $selected_window_hours) {
+            // מאפשר גמישות של 50% מעבר לחלון: אירוע שגילו עד 1.5x החלון עדיין תקין.
+            // סיפורים מתמשכים (מתחים, מלחמות) מקבלים "אומדן גיל" גבוה על ידי המודל
+            // גם כשיש פיתוח חדש — לכן הגבול הוא 1.5x ולא 1x.
+            if ($estimated_age_hours > $selected_window_hours * 1.5) {
                 self::skip_job(
                     $job_id,
                     'topic_outside_search_window',
-                    'הנושא נפסל: גיל ההתפתחות המשוער חורג מחלון הזמן שהוגדר לפרופיל.',
+                    sprintf('הנושא נפסל: גיל ההתפתחות המשוער (%.0f ש׳) חורג מ-1.5x חלון הזמן (%d ש׳).', $estimated_age_hours, $selected_window_hours),
                     $payload
                 );
                 return;
             }
-
-            if ($freshness_confidence === 'low') {
-                self::skip_job(
-                    $job_id,
-                    'topic_low_freshness_confidence',
-                    'הנושא נפסל: רמת הביטחון בטריות האירוע נמוכה מדי לכתבת חדשות אוטומטית.',
-                    $payload
-                );
-                return;
-            }
+            // הערה: freshness_confidence נשאר מידע לצרכי לוג/debug בלבד.
+            // אם המודל החזיר status='ok' זה מספיק — הוא מוסמך לשפוט טריות.
         }
 
         $topic_title = sanitize_text_field((string) ($topic['topic_title'] ?? ''));
@@ -116,10 +110,12 @@ final class MAIE_Generator
             return;
         }
 
+        $freshness_label = sanitize_key((string) ($topic['freshness_confidence'] ?? ''));
+        $age_label = isset($topic['estimated_event_age_hours']) ? round((float) $topic['estimated_event_age_hours'], 1) . ' ש׳' : '?';
         MAIE_DB::update_job($job_id, [
             'step' => 'topic_selected',
             'topic_title' => $topic_title,
-            'message' => 'נבחר נושא: ' . $topic_title,
+            'message' => "נבחר נושא: {$topic_title} (טריות: {$freshness_label}, גיל משוער: {$age_label})",
             'payload' => $payload,
         ]);
 
