@@ -18,6 +18,7 @@ final class MAIE_Admin
         add_action('admin_post_maie_run_cron_now', [__CLASS__, 'handle_run_cron_now']);
         add_action('admin_post_maie_cleanup_logs', [__CLASS__, 'handle_cleanup_logs']);
         add_action('wp_ajax_maie_job_status', [__CLASS__, 'ajax_job_status']);
+        add_action('wp_ajax_maie_kick_job', [__CLASS__, 'ajax_kick_job']);
     }
 
     public static function register_menu(): void
@@ -564,8 +565,16 @@ final class MAIE_Admin
                 ],
             ]);
 
-            // אם WP-Cron מושבת (DISABLE_WP_CRON=true), נריץ את המשימה ישירות.
-            // אחרת נשתמש במנגנון ה-async הרגיל.
+            // שלח ריידיירקט מיידי לדפדפן לפני כל קריאת רשת או הרצת משימה.
+            // send_response_and_continue() סוגר את החיבור לדפדפן (fastcgi_finish_request
+            // ב-PHP-FPM, או flush ב-mod_php); ה-PHP ממשיך לרוץ ברקע לאחר מכן.
+            wp_safe_redirect(add_query_arg([
+                'page' => 'maie-logs',
+                'job_id' => $job_id,
+                'maie_notice' => 'job_queued',
+            ], admin_url('admin.php')));
+            self::send_response_and_continue();
+
             if (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON) {
                 MAIE_Generator::run_job($job_id);
             } else {
@@ -573,22 +582,35 @@ final class MAIE_Admin
                 if (function_exists('spawn_cron')) {
                     spawn_cron(time());
                 }
-                // HTTP request נוסף לוודא שה-cron יופעל (fallback לסביבות מסוימות)
-                wp_remote_post(admin_url('admin-ajax.php'), [
-                    'blocking' => false,
-                    'timeout' => 0.01,
-                    'body' => ['action' => 'maie_ping'],
-                    'sslverify' => apply_filters('https_local_ssl_verify', false),
-                ]);
             }
+            exit;
         }
 
         wp_safe_redirect(add_query_arg([
             'page' => 'maie-logs',
-            'job_id' => $job_id > 0 ? $job_id : 0,
-            'maie_notice' => $job_id > 0 ? 'job_queued' : 'job_queue_failed',
+            'job_id' => 0,
+            'maie_notice' => 'job_queue_failed',
         ], admin_url('admin.php')));
         exit;
+    }
+
+    private static function send_response_and_continue(): void
+    {
+        ignore_user_abort(true);
+        if (function_exists('fastcgi_finish_request')) {
+            // PHP-FPM: שולח את כל ה-headers (כולל Location) לדפדפן וסוגר את החיבור.
+            // ה-PHP ממשיך לרוץ בשקט ברקע.
+            fastcgi_finish_request();
+            return;
+        }
+        // mod_php / CGI fallback: ניסיון לסגור את החיבור לפני המשך עיבוד
+        header('Content-Encoding: none');
+        header('Content-Length: 0');
+        header('Connection: close');
+        while (ob_get_level() > 0) {
+            ob_end_flush();
+        }
+        flush();
     }
 
 
@@ -672,6 +694,34 @@ final class MAIE_Admin
                 ];
             }, $events),
         ]);
+    }
+
+    public static function ajax_kick_job(): void
+    {
+        self::guard();
+        check_ajax_referer('maie_job_status', 'nonce');
+
+        $job_id = absint($_POST['job_id'] ?? 0);
+        $job = $job_id > 0 ? MAIE_DB::get_job($job_id) : null;
+
+        if (!$job || $job['status'] !== 'queued') {
+            wp_send_json_success(['kicked' => false]);
+            return;
+        }
+
+        if (!wp_next_scheduled('maie_run_job_event', [$job_id])) {
+            wp_schedule_single_event(time(), 'maie_run_job_event', [$job_id]);
+        }
+
+        // Non-blocking ping to wp-cron.php to fire the scheduled event
+        wp_remote_post(site_url('wp-cron.php'), [
+            'blocking' => false,
+            'timeout' => 0.01,
+            'sslverify' => apply_filters('https_local_ssl_verify', false),
+            'body' => ['doing_wp_cron' => sprintf('%.22F', microtime(true))],
+        ]);
+
+        wp_send_json_success(['kicked' => true]);
     }
 
     private static function render_job_progress_panel(int $job_id): void

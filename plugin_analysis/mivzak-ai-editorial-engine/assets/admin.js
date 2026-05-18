@@ -37,6 +37,8 @@
     var timeline = document.getElementById('maie-job-timeline');
     var track = progressPanel.querySelector('.maie-progress-track');
     var pollTimer = null;
+    var queuedPolls = 0;
+    var kickAttempted = false;
 
     function escapeHtml(value) {
         return String(value || '')
@@ -102,6 +104,20 @@
         pollTimer = window.setTimeout(fetchStatus, parseInt(window.maieAdmin.pollMs || 1500, 10));
     }
 
+    function kickJob() {
+        if (kickAttempted) return;
+        kickAttempted = true;
+        var formData = new FormData();
+        formData.append('action', 'maie_kick_job');
+        formData.append('job_id', String(jobId));
+        formData.append('nonce', window.maieAdmin.jobStatusNonce || '');
+        window.fetch(window.maieAdmin.ajaxUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: formData,
+        }).catch(function () {});
+    }
+
     function fetchStatus() {
         var url = new URL(window.maieAdmin.ajaxUrl, window.location.origin);
         url.searchParams.set('action', 'maie_job_status');
@@ -113,6 +129,15 @@
                 if (!payload || !payload.success || !payload.data) {
                     scheduleNext();
                     return;
+                }
+                // If the job is still queued after 3 polls (~4.5 s), nudge WP-Cron
+                if (payload.data.status === 'queued') {
+                    queuedPolls++;
+                    if (queuedPolls >= 3) {
+                        kickJob();
+                    }
+                } else {
+                    queuedPolls = 0;
                 }
                 updatePanel(payload.data);
                 if (payload.data.status !== 'completed' && payload.data.status !== 'failed' && payload.data.status !== 'skipped') {
