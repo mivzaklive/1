@@ -10,10 +10,10 @@ final class MAIE_Prompts
     {
         return [
             'api_key' => '',
-            'text_model' => 'gpt-5.5',
-            'qa_model' => 'gpt-5.5',
-            'vision_model' => 'gpt-5.4',
-            'image_model' => 'gpt-image-2',
+            'text_model' => 'gpt-4o',
+            'qa_model' => 'gpt-4o',
+            'vision_model' => 'gpt-4o',
+            'image_model' => 'gpt-image-1',
             'default_post_author' => 1,
             'auto_cron_enabled' => 0,
             'web_search_enabled' => 1,
@@ -24,9 +24,10 @@ final class MAIE_Prompts
             'max_jobs_per_cron' => 5,
             'max_image_regeneration_attempts' => 2,
             'image_quality' => 'medium',
-            'image_size' => '1280x720',
+            'image_size' => '1536x1024',
             'image_output_format' => 'webp',
             'image_output_compression' => 90,
+            'jobs_retention_days' => 30,
         ];
     }
 

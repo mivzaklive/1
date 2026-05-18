@@ -29,9 +29,16 @@ final class MAIE_Cron
     public static function run(): void
     {
         // אם אירוע ה-Cron החוזר חסר משום מה, משחזרים אותו לפני עיבוד המשימות.
-        // הדבר חשוב במיוחד לאחר עדכון תוסף או בסביבות שבהן אירועי WP-Cron נמחקו.
         if (class_exists('MAIE_Install')) {
             MAIE_Install::ensure_cron_scheduled();
+        }
+
+        // ניקוי jobs ישנים פעם ביום (בדיקת transient)
+        if (!get_transient('maie_last_cleanup')) {
+            $settings = MAIE_DB::get_settings();
+            $retention_days = max(7, absint($settings['jobs_retention_days'] ?? 30));
+            MAIE_DB::delete_old_jobs($retention_days);
+            set_transient('maie_last_cleanup', 1, DAY_IN_SECONDS);
         }
 
         $started_at = current_time('mysql');

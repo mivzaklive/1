@@ -8,6 +8,10 @@ final class MAIE_Install
 {
     public static function activate(): void
     {
+        // רישום לוח הזמנים המותאם אישית לפני שמנסים לתזמן את ה-Cron
+        // (ה-filter רגיל נרשם ב-plugins_loaded שכבר עבר בעת ה-activation hook)
+        add_filter('cron_schedules', ['MAIE_Cron', 'add_custom_schedule']);
+
         self::create_tables();
         self::ensure_settings();
         self::seed_profiles();

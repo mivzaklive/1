@@ -20,10 +20,11 @@ final class MAIE_OpenAI
 
     public function responses_json(string $prompt, array $schema, array $options = []): array
     {
-        $model = sanitize_text_field((string) ($options['model'] ?? $this->settings['text_model'] ?? 'gpt-5.5'));
+        $model = sanitize_text_field((string) ($options['model'] ?? $this->settings['text_model'] ?? 'gpt-4o'));
         $tools = [];
         if (!empty($options['web_search']) && !empty($this->settings['web_search_enabled'])) {
-            $tools[] = ['type' => 'web_search'];
+            // שם כלי חיפוש הרשת הנכון ב-Responses API של OpenAI
+            $tools[] = ['type' => 'web_search_preview'];
         }
 
         $payload = [
@@ -116,7 +117,7 @@ final class MAIE_OpenAI
 
     public function responses_vision_json(string $prompt, string $mime_type, string $base64_image, array $schema, array $options = []): array
     {
-        $model = sanitize_text_field((string) ($options['model'] ?? $this->settings['vision_model'] ?? $this->settings['text_model'] ?? 'gpt-5.5'));
+        $model = sanitize_text_field((string) ($options['model'] ?? $this->settings['vision_model'] ?? $this->settings['text_model'] ?? 'gpt-4o'));
         $image_url = 'data:' . $mime_type . ';base64,' . $base64_image;
 
         $payload = [
@@ -214,22 +215,21 @@ final class MAIE_OpenAI
     public function generate_image(string $prompt, array $options = []): array
     {
         $model = MAIE_Options::allowed_image_model(
-            sanitize_text_field((string) ($options['model'] ?? $this->settings['image_model'] ?? 'gpt-image-2')),
-            'gpt-image-2'
+            sanitize_text_field((string) ($options['model'] ?? $this->settings['image_model'] ?? 'gpt-image-1')),
+            'gpt-image-1'
         );
         $size = MAIE_Options::allowed_image_size(
-            sanitize_text_field((string) ($options['size'] ?? $this->settings['image_size'] ?? '1280x720')),
-            '1280x720'
+            sanitize_text_field((string) ($options['size'] ?? $this->settings['image_size'] ?? '1536x1024')),
+            '1536x1024'
         );
         $quality = MAIE_Options::allowed_image_quality(
             sanitize_text_field((string) ($options['quality'] ?? $this->settings['image_quality'] ?? 'medium')),
             'medium'
         );
 
-        // מודלי GPT Image ישנים יותר תומכים בסט גדלים מצומצם. אם נבחר גודל 16:9 מותאם ל-Image 2,
-        // משתמשים בנוף 1536x1024 כדי למנוע כשל API.
-        if ($model !== 'gpt-image-2' && !in_array($size, ['1024x1024', '1024x1536', '1536x1024'], true)) {
-            $size = '1536x1024';
+        // DALL·E 3 תומך בגדלים שונים ובפרמטרים שונים מ-gpt-image-1
+        if ($model === 'dall-e-3') {
+            return $this->generate_image_dalle3($prompt, $size, $quality, $options);
         }
 
         $payload = [
@@ -302,6 +302,47 @@ final class MAIE_OpenAI
             'format' => (string) ($json['output_format'] ?? $payload['output_format']),
             'usage' => $json['usage'] ?? [],
         ];
+    }
+
+    // תמיכה ב-DALL·E 3 – מחזיר URL, לא base64; ממיר ל-base64 דרך HTTP
+    private function generate_image_dalle3(string $prompt, string $size, string $quality, array $options): array
+    {
+        $dalle3_sizes = ['1024x1024', '1792x1024', '1024x1792'];
+        if (!in_array($size, $dalle3_sizes, true)) {
+            $size = '1792x1024';
+        }
+        $dalle3_quality = in_array($quality, ['standard', 'hd'], true) ? $quality : 'standard';
+
+        $payload = [
+            'model' => 'dall-e-3',
+            'prompt' => $prompt,
+            'n' => 1,
+            'size' => $size,
+            'quality' => $dalle3_quality,
+            'response_format' => 'b64_json',
+        ];
+
+        $response = $this->request('/v1/images/generations', $payload);
+        if (is_wp_error($response)) {
+            return ['ok' => false, 'error' => $response->get_error_message(), 'raw' => null, 'image_b64' => '', 'format' => 'png', 'usage' => []];
+        }
+
+        $json = json_decode((string) wp_remote_retrieve_body($response), true);
+        if (!is_array($json)) {
+            return ['ok' => false, 'error' => 'OpenAI החזיר JSON לא תקין בעת יצירת תמונה (DALL·E 3).', 'raw' => wp_remote_retrieve_body($response), 'image_b64' => '', 'format' => 'png', 'usage' => []];
+        }
+
+        $api_error = $this->extract_api_error($json);
+        if ($api_error !== '') {
+            return ['ok' => false, 'error' => $api_error, 'raw' => $json, 'image_b64' => '', 'format' => 'png', 'usage' => $json['usage'] ?? []];
+        }
+
+        $image_b64 = (string) ($json['data'][0]['b64_json'] ?? '');
+        if ($image_b64 === '') {
+            return ['ok' => false, 'error' => 'לא התקבלה תמונה מ-DALL·E 3.', 'raw' => $json, 'image_b64' => '', 'format' => 'png', 'usage' => $json['usage'] ?? []];
+        }
+
+        return ['ok' => true, 'error' => '', 'raw' => $json, 'image_b64' => $image_b64, 'format' => 'png', 'usage' => $json['usage'] ?? []];
     }
 
     private function request(string $path, array $payload)

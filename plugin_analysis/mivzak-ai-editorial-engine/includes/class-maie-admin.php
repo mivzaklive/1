@@ -16,6 +16,7 @@ final class MAIE_Admin
         add_action('admin_post_maie_toggle_profile', [__CLASS__, 'handle_toggle_profile']);
         add_action('admin_post_maie_generate_now', [__CLASS__, 'handle_generate_now']);
         add_action('admin_post_maie_run_cron_now', [__CLASS__, 'handle_run_cron_now']);
+        add_action('admin_post_maie_cleanup_logs', [__CLASS__, 'handle_cleanup_logs']);
         add_action('wp_ajax_maie_job_status', [__CLASS__, 'ajax_job_status']);
     }
 
@@ -121,6 +122,12 @@ final class MAIE_Admin
         echo '<h1>מנוע כתבות AI – מבזק לייב</h1>';
         self::render_notice();
         echo '<p class="maie-lead">מערכת ליצירת כתבות אוטומטית לפי קטגוריות, עם מחקר רשת, כתיבה עיתונאית, תמונה ראשית ובקרת איכות.</p>';
+        if (empty($settings['api_key'])) {
+            echo '<div class="notice notice-warning"><p><strong>נדרש: הגדרת מפתח API</strong> – לפני השימוש במנוע, הזן את מפתח ה-OpenAI API שלך ב<a href="' . esc_url(admin_url('admin.php?page=maie-settings')) . '">הגדרות</a>.</p></div>';
+        }
+        if (empty($settings['auto_cron_enabled'])) {
+            echo '<div class="notice notice-info"><p><strong>האוטומציה כבויה</strong> – ניתן ליצור כתבות ידנית מעמוד <a href="' . esc_url(admin_url('admin.php?page=maie-profiles')) . '">קטגוריות ופרופילים</a>. להפעלת יצירה אוטומטית, אפשר את "הפעל יצירה אוטומטית" ב<a href="' . esc_url(admin_url('admin.php?page=maie-settings')) . '">הגדרות</a>.</p></div>';
+        }
 
         echo '<div class="maie-cards">';
         self::stat_card('פרופילים', (string) $profiles_count, 'קטגוריות מוכנות להפעלה');
@@ -174,10 +181,10 @@ final class MAIE_Admin
         echo '<section class="maie-panel">';
         echo '<h2>מודלי AI ועלויות</h2>';
         echo '<p class="description">האפשרויות המסומנות ברקע מודגש הן ברירות המחדל המומלצות. ניתן לחרוג מהן בפרופיל מסוים לצורך חיסכון.</p>';
-        self::choice_cards_field('text_model', 'מודל טקסט ראשי', (string) ($settings['text_model'] ?? 'gpt-5.5'), MAIE_Options::text_models(), 'משמש למחקר, כותרת, כתבה והפקת מטא-נתונים.');
-        self::choice_cards_field('qa_model', 'מודל בקרת איכות', (string) ($settings['qa_model'] ?? 'gpt-5.5'), MAIE_Options::qa_models(), 'בודק דיוק, ניסוח, הזיות, כפילויות והתאמה לפרומפט.');
-        self::choice_cards_field('vision_model', 'מודל בדיקת תמונה', (string) ($settings['vision_model'] ?? 'gpt-5.4'), MAIE_Options::vision_models(), 'בודק אם התמונה קשורה לכתבה ואם הופיעו בה טקסט, לוגו או בעיות איכות.');
-        self::choice_cards_field('image_model', 'מודל יצירת תמונה', (string) ($settings['image_model'] ?? 'gpt-image-2'), MAIE_Options::image_models(), 'יוצר את התמונה הראשית של הכתבה.');
+        self::choice_cards_field('text_model', 'מודל טקסט ראשי', (string) ($settings['text_model'] ?? 'gpt-4o'), MAIE_Options::text_models(), 'משמש למחקר, כותרת, כתבה והפקת מטא-נתונים.');
+        self::choice_cards_field('qa_model', 'מודל בקרת איכות', (string) ($settings['qa_model'] ?? 'gpt-4o'), MAIE_Options::qa_models(), 'בודק דיוק, ניסוח, הזיות, כפילויות והתאמה לפרומפט.');
+        self::choice_cards_field('vision_model', 'מודל בדיקת תמונה', (string) ($settings['vision_model'] ?? 'gpt-4o'), MAIE_Options::vision_models(), 'בודק אם התמונה קשורה לכתבה ואם הופיעו בה טקסט, לוגו או בעיות איכות.');
+        self::choice_cards_field('image_model', 'מודל יצירת תמונה', (string) ($settings['image_model'] ?? 'gpt-image-1'), MAIE_Options::image_models(), 'יוצר את התמונה הראשית של הכתבה.');
         echo '</section>';
 
         echo '<section class="maie-panel">';
@@ -202,11 +209,18 @@ final class MAIE_Admin
             'כאשר יש הרבה פרופילים שהגיעו למועד יצירה, זו הכמות המרבית שהמערכת תנסה לעבד בכל סבב. מומלץ 5 באתר עם הרבה קטגוריות פעילות.'
         );
         self::number_field('max_image_regeneration_attempts', 'ניסיונות יצירה מחדש של תמונה לאחר פסילה', absint($settings['max_image_regeneration_attempts'] ?? 2), 0, 5);
+        self::select_field(
+            'jobs_retention_days',
+            'שמירת לוגים',
+            absint($settings['jobs_retention_days'] ?? 30),
+            [7 => '7 ימים', 14 => '14 ימים', 30 => '30 ימים', 60 => '60 ימים', 90 => '90 ימים'],
+            'כמה ימים לשמור היסטוריית משימות ולוגים. ניקוי אוטומטי מתבצע אחת ליום.'
+        );
         echo '</section>';
 
         echo '<section class="maie-panel">';
         echo '<h2>הגדרות תמונה</h2>';
-        self::choice_cards_field('image_size', 'גודל תמונה', (string) ($settings['image_size'] ?? '1280x720'), MAIE_Options::image_sizes(), 'ברירת המחדל מיועדת לתמונה ראשית אופקית ולתצוגה מיטבית ב-Google Discover וב-Google News.');
+        self::choice_cards_field('image_size', 'גודל תמונה', (string) ($settings['image_size'] ?? '1536x1024'), MAIE_Options::image_sizes(), 'ברירת המחדל מיועדת לתמונה ראשית אופקית ולתצוגה מיטבית ב-Google Discover וב-Google News.');
         self::choice_cards_field('image_quality', 'איכות תמונה', (string) ($settings['image_quality'] ?? 'medium'), MAIE_Options::image_qualities(), 'איכות גבוהה יותר מגדילה עלות וזמן יצירה.');
         echo '<div class="maie-field"><label for="image_output_format">פורמט תמונה</label><select id="image_output_format" name="image_output_format">';
         foreach (['webp' => 'WebP – מומלץ', 'jpeg' => 'JPEG', 'png' => 'PNG'] as $value => $label) {
@@ -366,11 +380,11 @@ final class MAIE_Admin
         echo '<h2>מודלים, חיפוש ועלויות בפרופיל הזה</h2>';
         echo '<p class="description">השארת האפשרות המומלצת תירש את הגדרת המערכת הכללית. בקטגוריות פחות קריטיות ניתן לבחור מודל זול יותר או לכבות חיפוש רשת.</p>';
         self::choice_cards_field('web_search_mode', 'מצב חיפוש רשת', (string) ($profile['web_search_mode'] ?? 'inherit'), MAIE_Options::web_search_modes($content_mode), 'לחדשות עדכניות מומלץ חיפוש רשת. למדריכים כלליים אפשר לכבות כדי לחסוך.');
-        self::choice_cards_field('text_model_override', 'מודל טקסט לפרופיל', (string) ($profile['text_model_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::text_models(), (string) ($settings['text_model'] ?? 'gpt-5.5')), 'משפיע על איכות המחקר, הכותרת והכתבה בפרופיל זה.');
-        self::choice_cards_field('qa_model_override', 'מודל בקרת איכות לפרופיל', (string) ($profile['qa_model_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::qa_models(), (string) ($settings['qa_model'] ?? 'gpt-5.5')), 'משפיע על רמת הבקרה לפני שמירה או פרסום.');
-        self::choice_cards_field('vision_model_override', 'מודל בדיקת תמונה לפרופיל', (string) ($profile['vision_model_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::vision_models(), (string) ($settings['vision_model'] ?? 'gpt-5.4')), 'משפיע על פסילת תמונות עם טקסט, לוגו או חוסר התאמה.');
-        self::choice_cards_field('image_model_override', 'מודל יצירת תמונה לפרופיל', (string) ($profile['image_model_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::image_models(), (string) ($settings['image_model'] ?? 'gpt-image-2')), 'ניתן לחסוך בקטגוריות שבהן התמונה פחות מרכזית.');
-        self::choice_cards_field('image_size_override', 'גודל תמונה לפרופיל', (string) ($profile['image_size_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::image_sizes(), (string) ($settings['image_size'] ?? '1280x720')), 'ברירת המחדל המומלצת היא 1280×720.');
+        self::choice_cards_field('text_model_override', 'מודל טקסט לפרופיל', (string) ($profile['text_model_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::text_models(), (string) ($settings['text_model'] ?? 'gpt-4o')), 'משפיע על איכות המחקר, הכותרת והכתבה בפרופיל זה.');
+        self::choice_cards_field('qa_model_override', 'מודל בקרת איכות לפרופיל', (string) ($profile['qa_model_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::qa_models(), (string) ($settings['qa_model'] ?? 'gpt-4o')), 'משפיע על רמת הבקרה לפני שמירה או פרסום.');
+        self::choice_cards_field('vision_model_override', 'מודל בדיקת תמונה לפרופיל', (string) ($profile['vision_model_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::vision_models(), (string) ($settings['vision_model'] ?? 'gpt-4o')), 'משפיע על פסילת תמונות עם טקסט, לוגו או חוסר התאמה.');
+        self::choice_cards_field('image_model_override', 'מודל יצירת תמונה לפרופיל', (string) ($profile['image_model_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::image_models(), (string) ($settings['image_model'] ?? 'gpt-image-1')), 'ניתן לחסוך בקטגוריות שבהן התמונה פחות מרכזית.');
+        self::choice_cards_field('image_size_override', 'גודל תמונה לפרופיל', (string) ($profile['image_size_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::image_sizes(), (string) ($settings['image_size'] ?? '1536x1024')), 'ברירת המחדל המומלצת היא 1536×1024.');
         self::choice_cards_field('image_quality_override', 'איכות תמונה לפרופיל', (string) ($profile['image_quality_override'] ?? ''), MAIE_Options::inherit_options(MAIE_Options::image_qualities(), (string) ($settings['image_quality'] ?? 'medium')), 'איכות גבוהה מייקרת יצירת תמונות.');
         echo '</section>';
 
@@ -392,8 +406,10 @@ final class MAIE_Admin
         self::guard();
         $jobs = MAIE_DB::get_jobs(120);
         $focused_job_id = absint($_GET['job_id'] ?? 0);
+        $cleanup_url = wp_nonce_url(admin_url('admin-post.php?action=maie_cleanup_logs'), 'maie_cleanup_logs');
+
         echo '<div class="wrap maie-wrap" dir="rtl">';
-        echo '<h1>לוגים ומשימות</h1>';
+        echo '<h1>לוגים ומשימות <a class="page-title-action" href="' . esc_url($cleanup_url) . '" onclick="return confirm(\'למחוק משימות ישנות?\')">נקה לוגים ישנים</a></h1>';
         self::render_notice();
         self::render_cron_health_panel();
         if ($focused_job_id > 0) {
@@ -547,14 +563,23 @@ final class MAIE_Admin
                     'manual_requested_at' => current_time('mysql'),
                 ],
             ]);
-            // מפעילים את משימת היצירה הידנית מיד בתור הרקע.
-            // בגרסאות קודמות המשימה תוכננה לעוד 5 שניות, אך לאחר ההפניה לעמוד הלוגים
-            // לא תמיד התבצעה טעינת עמוד נוספת אחרי שהאירוע הפך ל-due, ולכן המשימה יכלה להישאר "בתור".
-            wp_schedule_single_event(time(), 'maie_run_job_event', [$job_id]);
 
-            // WP-Cron מופעל רק לאחר בקשת HTTP; לכן נבצע spawn יזום ולא נמתין לטעינת עמוד עתידית.
-            if (function_exists('spawn_cron')) {
-                spawn_cron(time());
+            // אם WP-Cron מושבת (DISABLE_WP_CRON=true), נריץ את המשימה ישירות.
+            // אחרת נשתמש במנגנון ה-async הרגיל.
+            if (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON) {
+                MAIE_Generator::run_job($job_id);
+            } else {
+                wp_schedule_single_event(time(), 'maie_run_job_event', [$job_id]);
+                if (function_exists('spawn_cron')) {
+                    spawn_cron(time());
+                }
+                // HTTP request נוסף לוודא שה-cron יופעל (fallback לסביבות מסוימות)
+                wp_remote_post(admin_url('admin-ajax.php'), [
+                    'blocking' => false,
+                    'timeout' => 0.01,
+                    'body' => ['action' => 'maie_ping'],
+                    'sslverify' => apply_filters('https_local_ssl_verify', false),
+                ]);
             }
         }
 
@@ -566,6 +591,24 @@ final class MAIE_Admin
         exit;
     }
 
+
+    public static function handle_cleanup_logs(): void
+    {
+        self::guard();
+        check_admin_referer('maie_cleanup_logs');
+
+        $settings = MAIE_DB::get_settings();
+        $retention_days = max(7, absint($settings['jobs_retention_days'] ?? 30));
+        $deleted = MAIE_DB::delete_old_jobs($retention_days);
+        delete_transient('maie_last_cleanup');
+
+        wp_safe_redirect(add_query_arg([
+            'page' => 'maie-logs',
+            'maie_notice' => 'logs_cleaned',
+            'deleted' => $deleted,
+        ], admin_url('admin.php')));
+        exit;
+    }
 
     public static function handle_run_cron_now(): void
     {
@@ -715,6 +758,7 @@ final class MAIE_Admin
     private static function render_notice(): void
     {
         $notice = sanitize_key((string) ($_GET['maie_notice'] ?? ''));
+        $deleted = absint($_GET['deleted'] ?? 0);
         $messages = [
             'settings_saved' => ['success', 'ההגדרות נשמרו בהצלחה.'],
             'profile_saved' => ['success', 'הפרופיל נשמר בהצלחה.'],
@@ -722,6 +766,7 @@ final class MAIE_Admin
             'job_queued' => ['success', 'המשימה נוספה לתור ותופעל ברקע. ראה את מצב ההתקדמות בלוגים.'],
             'job_queue_failed' => ['error', 'לא ניתן היה ליצור משימה חדשה.'],
             'cron_run_now' => ['success', 'הרצת Cron יזומה הוכנסה לתור רקע. סיכום הסטטוס והמשימות האחרונות יתעדכנו לאחר העיבוד.'],
+            'logs_cleaned' => ['success', 'הלוגים נוקו בהצלחה. נמחקו ' . $deleted . ' משימות ישנות.'],
         ];
 
         if (!isset($messages[$notice])) {

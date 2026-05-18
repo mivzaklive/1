@@ -8,6 +8,11 @@ final class MAIE_Generator
 {
     public static function run_job(int $job_id): void
     {
+        // יצירת כתבה עם AI + חיפוש רשת עשויה לקחת עד 3 דקות; נרחיב את מגבלת הזמן
+        if (function_exists('set_time_limit') && !ini_get('safe_mode')) {
+            set_time_limit(300);
+        }
+
         $job = MAIE_DB::get_job($job_id);
         if (!$job) {
             return;
@@ -166,6 +171,9 @@ final class MAIE_Generator
         $article_data = $article_response['data'] ?? [];
         $content_html = self::clean_article_html((string) ($article_data['content_html'] ?? ''));
         $excerpt = sanitize_textarea_field((string) ($article_data['excerpt'] ?? ''));
+        $suggested_tags = isset($article_data['suggested_tags']) && is_array($article_data['suggested_tags'])
+            ? array_values(array_filter(array_map('sanitize_text_field', $article_data['suggested_tags'])))
+            : [];
         if ($content_html === '') {
             self::fail_job($job_id, 'article_missing', 'המודל החזיר גוף כתבה ריק.', $payload);
             return;
@@ -302,6 +310,11 @@ final class MAIE_Generator
         update_post_meta($post_id, '_maie_job_id', $job_id);
         update_post_meta($post_id, '_maie_generated_at', current_time('mysql'));
         update_post_meta($post_id, '_maie_generation_source', $requested_post_status !== '' ? 'manual' : 'cron');
+
+        // שמירת תגיות שהוצעו על ידי ה-AI
+        if ($suggested_tags) {
+            wp_set_post_tags($post_id, $suggested_tags, false);
+        }
 
         if ($image_binary !== '') {
             $attachment = self::attach_featured_image($post_id, $title, $image_binary, $image_format, $image_meta);
@@ -485,27 +498,27 @@ PROMPT;
     {
         $override = sanitize_text_field((string) ($profile['text_model_override'] ?? ''));
         if ($override !== '') {
-            return MAIE_Options::allowed_text_model($override, (string) ($settings['text_model'] ?? 'gpt-5.5'));
+            return MAIE_Options::allowed_text_model($override, (string) ($settings['text_model'] ?? 'gpt-4o'));
         }
-        return MAIE_Options::allowed_text_model((string) ($settings['text_model'] ?? 'gpt-5.5'), 'gpt-5.5');
+        return MAIE_Options::allowed_text_model((string) ($settings['text_model'] ?? 'gpt-4o'), 'gpt-4o');
     }
 
     private static function effective_qa_model(array $profile, array $settings): string
     {
         $override = sanitize_text_field((string) ($profile['qa_model_override'] ?? ''));
         if ($override !== '') {
-            return MAIE_Options::allowed_qa_model($override, (string) ($settings['qa_model'] ?? 'gpt-5.5'));
+            return MAIE_Options::allowed_qa_model($override, (string) ($settings['qa_model'] ?? 'gpt-4o'));
         }
-        return MAIE_Options::allowed_qa_model((string) ($settings['qa_model'] ?? 'gpt-5.5'), 'gpt-5.5');
+        return MAIE_Options::allowed_qa_model((string) ($settings['qa_model'] ?? 'gpt-4o'), 'gpt-4o');
     }
 
     private static function effective_vision_model(array $profile, array $settings): string
     {
         $override = sanitize_text_field((string) ($profile['vision_model_override'] ?? ''));
         if ($override !== '') {
-            return MAIE_Options::allowed_vision_model($override, (string) ($settings['vision_model'] ?? 'gpt-5.4'));
+            return MAIE_Options::allowed_vision_model($override, (string) ($settings['vision_model'] ?? 'gpt-4o'));
         }
-        return MAIE_Options::allowed_vision_model((string) ($settings['vision_model'] ?? 'gpt-5.4'), 'gpt-5.4');
+        return MAIE_Options::allowed_vision_model((string) ($settings['vision_model'] ?? 'gpt-4o'), 'gpt-4o');
     }
 
     private static function effective_image_options(array $profile, array $settings): array
@@ -516,11 +529,11 @@ PROMPT;
 
         return [
             'model' => $model_override !== ''
-                ? MAIE_Options::allowed_image_model($model_override, (string) ($settings['image_model'] ?? 'gpt-image-2'))
-                : MAIE_Options::allowed_image_model((string) ($settings['image_model'] ?? 'gpt-image-2'), 'gpt-image-2'),
+                ? MAIE_Options::allowed_image_model($model_override, (string) ($settings['image_model'] ?? 'gpt-image-1'))
+                : MAIE_Options::allowed_image_model((string) ($settings['image_model'] ?? 'gpt-image-1'), 'gpt-image-1'),
             'size' => $size_override !== ''
-                ? MAIE_Options::allowed_image_size($size_override, (string) ($settings['image_size'] ?? '1280x720'))
-                : MAIE_Options::allowed_image_size((string) ($settings['image_size'] ?? '1280x720'), '1280x720'),
+                ? MAIE_Options::allowed_image_size($size_override, (string) ($settings['image_size'] ?? '1536x1024'))
+                : MAIE_Options::allowed_image_size((string) ($settings['image_size'] ?? '1536x1024'), '1536x1024'),
             'quality' => $quality_override !== ''
                 ? MAIE_Options::allowed_image_quality($quality_override, (string) ($settings['image_quality'] ?? 'medium'))
                 : MAIE_Options::allowed_image_quality((string) ($settings['image_quality'] ?? 'medium'), 'medium'),
@@ -701,6 +714,11 @@ PROMPT;
             'em' => [],
             'br' => [],
             'blockquote' => [],
+            'h2' => [],
+            'h3' => [],
+            'ul' => [],
+            'ol' => [],
+            'li' => [],
         ];
 
         $html = wp_kses($html, $allowed);

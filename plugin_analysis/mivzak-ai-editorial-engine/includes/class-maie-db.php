@@ -30,19 +30,27 @@ final class MAIE_DB
         return $wpdb->prefix . 'maie_article_views';
     }
 
+    private static ?array $settings_cache = null;
+
     public static function get_settings(): array
     {
+        if (self::$settings_cache !== null) {
+            return self::$settings_cache;
+        }
+
         $defaults = MAIE_Prompts::default_settings();
         $saved = get_option('maie_settings', []);
         if (!is_array($saved)) {
             $saved = [];
         }
 
-        return array_merge($defaults, $saved);
+        self::$settings_cache = array_merge($defaults, $saved);
+        return self::$settings_cache;
     }
 
     public static function update_settings(array $settings): bool
     {
+        self::$settings_cache = null; // אפס cache לאחר עדכון
         $defaults = MAIE_Prompts::default_settings();
         $clean = [];
 
@@ -87,6 +95,7 @@ final class MAIE_DB
                 case 'image_output_compression':
                 case 'max_jobs_per_cron':
                 case 'max_image_regeneration_attempts':
+                case 'jobs_retention_days':
                     $clean[$key] = max(0, absint($value));
                     break;
 
@@ -119,6 +128,10 @@ final class MAIE_DB
 
         if ($clean['max_image_regeneration_attempts'] > 5) {
             $clean['max_image_regeneration_attempts'] = 5;
+        }
+
+        if (isset($clean['jobs_retention_days']) && ($clean['jobs_retention_days'] < 7 || $clean['jobs_retention_days'] > 365)) {
+            $clean['jobs_retention_days'] = 30;
         }
 
         return update_option('maie_settings', $clean, false);
@@ -584,6 +597,35 @@ final class MAIE_DB
             $limit
         ), ARRAY_A);
         return is_array($rows) ? $rows : [];
+    }
+
+    public static function delete_old_jobs(int $days = 30): int
+    {
+        global $wpdb;
+        $days = max(7, min(365, $days));
+        $cutoff = gmdate('Y-m-d H:i:s', time() - DAY_IN_SECONDS * $days);
+
+        $jobs_table = self::jobs_table();
+        $events_table = self::job_events_table();
+
+        // מחק תחילה את האירועים המשויכים למשימות ישנות
+        $wpdb->query($wpdb->prepare(
+            "DELETE e FROM {$events_table} e
+             INNER JOIN {$jobs_table} j ON j.id = e.job_id
+             WHERE j.status IN ('completed','failed','skipped')
+               AND j.created_at < %s",
+            $cutoff
+        ));
+
+        // מחק את המשימות הישנות עצמן
+        $deleted = (int) $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$jobs_table}
+             WHERE status IN ('completed','failed','skipped')
+               AND created_at < %s",
+            $cutoff
+        ));
+
+        return $deleted;
     }
 
     public static function progress_for_step(string $step, int $fallback = 0): int
