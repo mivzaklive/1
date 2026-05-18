@@ -406,13 +406,13 @@ final class MAIE_Admin
     {
         self::guard();
         $focused_job_id = absint($_GET['job_id'] ?? 0);
-        $cleanup_url = wp_nonce_url(admin_url('admin-post.php?action=maie_cleanup_logs'), 'maie_cleanup_logs');
+        $cleanup_url = wp_nonce_url(admin_url('admin-post.php?action=maie_cleanup_logs&days=0'), 'maie_cleanup_logs');
 
         $log_filters = self::get_log_filters(wp_unslash($_GET));
         $jobs = MAIE_DB::get_jobs(200, $log_filters);
 
         echo '<div class="wrap maie-wrap" dir="rtl">';
-        echo '<h1>לוגים ומשימות <a class="page-title-action" href="' . esc_url($cleanup_url) . '" onclick="return confirm(\'למחוק משימות ישנות?\')">נקה לוגים ישנים</a></h1>';
+        echo '<h1>לוגים ומשימות <a class="page-title-action" href="' . esc_url($cleanup_url) . '" onclick="return confirm(\'למחוק את כל הלוגים? פעולה זו לא ניתנת לביטול.\')">נקה את כל הלוגים</a></h1>';
         self::render_notice();
         self::render_cron_health_panel();
         if ($focused_job_id > 0) {
@@ -676,9 +676,15 @@ final class MAIE_Admin
         self::guard();
         check_admin_referer('maie_cleanup_logs');
 
-        $settings = MAIE_DB::get_settings();
-        $retention_days = max(7, absint($settings['jobs_retention_days'] ?? 30));
-        $deleted = MAIE_DB::delete_old_jobs($retention_days);
+        // days=0 = מחק הכל (כפתור ידני), מינוס 1 = ברירת מחדל לניקוי לפי הגדרה
+        $days_param = absint($_GET['days'] ?? 999);
+        if ($days_param === 0) {
+            $deleted = MAIE_DB::delete_old_jobs(0);
+        } else {
+            $settings = MAIE_DB::get_settings();
+            $retention_days = max(1, absint($settings['jobs_retention_days'] ?? 30));
+            $deleted = MAIE_DB::delete_old_jobs($retention_days);
+        }
         delete_transient('maie_last_cleanup');
 
         wp_safe_redirect(add_query_arg([

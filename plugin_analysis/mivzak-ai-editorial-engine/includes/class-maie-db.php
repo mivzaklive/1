@@ -646,13 +646,25 @@ final class MAIE_DB
     public static function delete_old_jobs(int $days = 30): int
     {
         global $wpdb;
-        $days = max(7, min(365, $days));
-        $cutoff = gmdate('Y-m-d H:i:s', time() - DAY_IN_SECONDS * $days);
-
-        $jobs_table = self::jobs_table();
+        $jobs_table   = self::jobs_table();
         $events_table = self::job_events_table();
 
-        // מחק תחילה את האירועים המשויכים למשימות ישנות
+        // days = 0  → מחק הכל (למעט משימות שרצות כרגע)
+        if ($days === 0) {
+            $wpdb->query(
+                "DELETE e FROM {$events_table} e
+                 INNER JOIN {$jobs_table} j ON j.id = e.job_id
+                 WHERE j.status IN ('completed','failed','skipped','queued')"
+            );
+            return (int) $wpdb->query(
+                "DELETE FROM {$jobs_table}
+                 WHERE status IN ('completed','failed','skipped','queued')"
+            );
+        }
+
+        $days   = max(1, min(365, $days));
+        $cutoff = gmdate('Y-m-d H:i:s', time() - DAY_IN_SECONDS * $days);
+
         $wpdb->query($wpdb->prepare(
             "DELETE e FROM {$events_table} e
              INNER JOIN {$jobs_table} j ON j.id = e.job_id
@@ -661,15 +673,12 @@ final class MAIE_DB
             $cutoff
         ));
 
-        // מחק את המשימות הישנות עצמן
-        $deleted = (int) $wpdb->query($wpdb->prepare(
+        return (int) $wpdb->query($wpdb->prepare(
             "DELETE FROM {$jobs_table}
              WHERE status IN ('completed','failed','skipped')
                AND created_at < %s",
             $cutoff
         ));
-
-        return $deleted;
     }
 
     public static function progress_for_step(string $step, int $fallback = 0): int
