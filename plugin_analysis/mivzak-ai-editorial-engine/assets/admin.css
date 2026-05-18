@@ -1,0 +1,577 @@
+.maie-wrap {
+    max-width: 1400px;
+}
+
+.maie-lead {
+    font-size: 15px;
+    color: #445;
+    margin: 10px 0 22px;
+}
+
+.maie-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+}
+
+.maie-card,
+.maie-panel {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+
+.maie-card {
+    padding: 18px;
+}
+
+.maie-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #50575e;
+}
+
+.maie-card-value {
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 8px 0;
+}
+
+.maie-card-desc {
+    color: #646970;
+}
+
+.maie-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 18px;
+    align-items: start;
+}
+
+.maie-panel {
+    padding: 20px;
+    margin: 18px 0;
+}
+
+.maie-panel h2 {
+    margin-top: 0;
+}
+
+.maie-form .maie-field {
+    margin: 18px 0;
+}
+
+.maie-field > label,
+.maie-field > .maie-field-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.maie-field input[type="text"],
+.maie-field input[type="password"],
+.maie-field input[type="number"],
+.maie-field select,
+.maie-field textarea {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 8px;
+}
+
+.maie-field input[type="number"] {
+    max-width: 180px;
+}
+
+.maie-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.maie-checkbox input[type="checkbox"] {
+    margin: 0;
+}
+
+.maie-inline-number {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.maie-table-wrap {
+    overflow-x: auto;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 14px;
+}
+
+.maie-table {
+    border: 0;
+}
+
+.maie-table th,
+.maie-table td {
+    vertical-align: top;
+}
+
+.maie-actions,
+.maie-actions-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.maie-actions-cell {
+    min-width: 230px;
+}
+
+.maie-ok {
+    color: #007017;
+    font-weight: 700;
+}
+
+.maie-bad {
+    color: #b32d2e;
+    font-weight: 700;
+}
+
+.maie-muted {
+    color: #646970;
+    font-weight: 700;
+}
+
+.maie-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.maie-status-completed {
+    background: #edfaef;
+    color: #007017;
+}
+
+.maie-status-failed {
+    background: #fcf0f1;
+    color: #b32d2e;
+}
+
+.maie-status-skipped {
+    background: #fff8e5;
+    color: #8a6200;
+}
+
+.maie-status-running,
+.maie-status-queued {
+    background: #eaf4ff;
+    color: #135e96;
+}
+
+.maie-mini-table th {
+    width: 42%;
+}
+
+@media (max-width: 782px) {
+    .maie-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .maie-panel {
+        padding: 16px;
+    }
+
+    .maie-actions-cell {
+        min-width: 0;
+    }
+}
+
+
+.maie-publish-now {
+    border-color: #b32d2e !important;
+    color: #b32d2e !important;
+    background: #fff !important;
+}
+
+.maie-publish-now:hover,
+.maie-publish-now:focus {
+    border-color: #8f2424 !important;
+    color: #8f2424 !important;
+    background: #fff5f5 !important;
+}
+
+.maie-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-top: 10px;
+}
+
+.maie-choice-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    border: 1px solid #dcdcde;
+    border-radius: 14px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+    min-height: 150px;
+}
+
+.maie-choice-card:hover {
+    border-color: #2271b1;
+    box-shadow: 0 2px 8px rgba(34, 113, 177, .12);
+}
+
+.maie-choice-card.is-recommended {
+    border-color: #72aee6;
+    background: #eef7ff;
+}
+
+.maie-choice-card.is-selected {
+    border-color: #135e96;
+    box-shadow: 0 0 0 2px rgba(19, 94, 150, .16);
+}
+
+.maie-choice-card input[type="radio"] {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    margin: 0;
+}
+
+.maie-choice-title {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    padding-left: 28px;
+}
+
+.maie-choice-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    background: #dbeafe;
+    color: #135e96;
+}
+
+.maie-choice-card.is-recommended .maie-choice-badge {
+    background: #cce5ff;
+}
+
+.maie-choice-description,
+.maie-choice-cost {
+    display: block;
+    line-height: 1.45;
+}
+
+.maie-choice-description {
+    color: #3c434a;
+}
+
+.maie-choice-cost {
+    font-weight: 600;
+    color: #50575e;
+}
+
+.maie-filter-form {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 14px;
+    padding: 18px;
+    margin: 18px 0;
+}
+
+.maie-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    align-items: end;
+}
+
+.maie-filter-submit .button {
+    width: 100%;
+    min-height: 40px;
+}
+
+.maie-admin-ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #eaf4ff;
+    border: 1px solid #72aee6;
+    color: #135e96;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+@media (max-width: 782px) {
+    .maie-choice-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.maie-small-muted {
+    color: #646970;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.maie-profile-switch-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.maie-profile-switch {
+    position: relative;
+    display: inline-block;
+    width: 54px;
+    height: 30px;
+    border-radius: 999px;
+    background: #c3c4c7;
+    border: 1px solid #b7b8bb;
+    text-decoration: none;
+    transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
+}
+
+.maie-profile-switch:hover,
+.maie-profile-switch:focus {
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, .18);
+    outline: none;
+}
+
+.maie-profile-switch.is-on {
+    background: #00a32a;
+    border-color: #008a20;
+}
+
+.maie-profile-switch-knob {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.25);
+    transition: transform .18s ease;
+}
+
+.maie-profile-switch.is-on .maie-profile-switch-knob {
+    transform: translateX(-24px);
+}
+
+.maie-profile-switch-label {
+    font-weight: 700;
+    color: #50575e;
+}
+
+.maie-profile-switch.is-on + .maie-profile-switch-label {
+    color: #007017;
+}
+
+.maie-profile-filter-form .maie-filter-grid {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.maie-filter-reset {
+    margin: 12px 0 0;
+}
+
+.maie-job-progress-panel {
+    border-color: #72aee6;
+    background: linear-gradient(180deg, #f7fbff 0%, #fff 100%);
+}
+
+.maie-progress-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 14px;
+}
+
+.maie-progress-head h2 {
+    margin-bottom: 4px;
+}
+
+.maie-progress-subtitle {
+    margin: 0;
+    color: #50575e;
+}
+
+.maie-progress-percent {
+    min-width: 84px;
+    text-align: center;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: #135e96;
+    color: #fff;
+    font-weight: 800;
+    font-size: 22px;
+    line-height: 1;
+}
+
+.maie-progress-track {
+    position: relative;
+    width: 100%;
+    height: 18px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #dbeafe;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
+}
+
+.maie-progress-track span {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2271b1, #00a32a);
+    transition: width .45s ease;
+}
+
+.maie-progress-message {
+    margin: 12px 0 0;
+    font-weight: 700;
+    color: #1d2327;
+}
+
+.maie-job-timeline-wrap {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #dcdcde;
+}
+
+.maie-job-timeline-wrap h3 {
+    margin: 0 0 12px;
+}
+
+.maie-job-timeline {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 10px;
+}
+
+.maie-timeline-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    grid-template-areas:
+        "bullet title"
+        "bullet meta";
+    column-gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.maie-timeline-bullet {
+    grid-area: bullet;
+    align-self: start;
+    width: 12px;
+    height: 12px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: #2271b1;
+    box-shadow: 0 0 0 4px rgba(34,113,177,.12);
+}
+
+.maie-timeline-title {
+    grid-area: title;
+    font-weight: 800;
+    color: #1d2327;
+}
+
+.maie-timeline-item small {
+    grid-area: meta;
+    display: block;
+    margin-top: 3px;
+    color: #50575e;
+    line-height: 1.45;
+}
+
+.maie-timeline-item.is-waiting {
+    display: block;
+    color: #50575e;
+}
+
+@media (max-width: 782px) {
+    .maie-progress-head {
+        flex-direction: column;
+    }
+
+    .maie-progress-percent {
+        min-width: 0;
+    }
+}
+
+
+.maie-sortable-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.maie-cron-health-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.maie-cron-health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin: 16px 0 12px;
+}
+
+.maie-cron-health-grid > div {
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.maie-cron-summary {
+    margin: 10px 0 0;
+    padding: 12px;
+    background: #eef7ff;
+    border-radius: 10px;
+    border: 1px solid #c7e2fb;
+}
+
+
+.maie-cron-backlog {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border: 1px solid #f2cf76;
+    border-radius: 10px;
+    background: #fff8e8;
+    color: #6b4e00;
+    line-height: 1.7;
+}
