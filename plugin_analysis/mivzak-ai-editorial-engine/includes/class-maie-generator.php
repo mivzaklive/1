@@ -348,9 +348,15 @@ final class MAIE_Generator
     {
         $settings = MAIE_DB::get_settings();
         $use_web_search = self::profile_web_search_enabled($profile, $settings);
+
+        // תאריך נוכחי — חיוני לפרופילים ללא חיפוש רשת (אוכל, אורח חיים, עונתי)
+        // כדי שהמודל לא יציע מתכוני חורף בקיץ, מנות לחגים שעברו וכו'
+        $current_date_label = wp_date('d/m/Y') . ' (' . wp_date('F Y') . ')';
+
         $web_search_instruction = $use_web_search
             ? 'השתמש בחיפוש רשת עדכני.'
-            : 'אין חיפוש רשת בפרופיל זה. בחר רק נושא שאינו תלוי בעובדות זמן-אמת, והימנע מחדשות מתפרצות.';
+            : "אין חיפוש רשת בפרופיל זה. התאריך הנוכחי הוא {$current_date_label}. בחר נושא שמתאים לעונה ולחודש הנוכחי בדיוק. אין לבחור מנות, נושאים או חגים שאינם מתאימים לתקופה הנוכחית בישראל (למשל: אין להציע מרקי חורף בקיץ, אין להציע מנות לחגי תשרי שלא בעונתם, אין להציע בישולי חג כשאין חג בקרוב). בחר רק נושא שאינו תלוי בעובדות זמן-אמת.";
+
         $recent_titles = self::recent_titles_for_profile($profile);
         $recent_job_topics = MAIE_DB::recent_job_topics(absint($profile['id'] ?? 0));
         $window = max(1, absint($profile['search_window_hours'] ?? 12));
@@ -363,6 +369,8 @@ final class MAIE_Generator
 
         $prompt = <<<PROMPT
 {$brief}
+
+תאריך נוכחי: {$current_date_label}
 
 פרטי הפרופיל:
 - סוג תוכן: {$mode}
@@ -706,7 +714,16 @@ PROMPT;
         $title = trim(preg_replace('/\s+/u', ' ', $title) ?: $title);
         $title = str_replace(';', ',', $title);
         $title = rtrim($title, ". \t\n\r\0\x0B");
-        return sanitize_text_field($title);
+        $title = sanitize_text_field($title);
+
+        // Hard SEO limit: truncate to last word boundary within 70 chars
+        if (mb_strlen($title, 'UTF-8') > 70) {
+            $truncated = mb_substr($title, 0, 67, 'UTF-8');
+            $last_space = mb_strrpos($truncated, ' ', 0, 'UTF-8');
+            $title = ($last_space !== false ? mb_substr($truncated, 0, $last_space, 'UTF-8') : $truncated) . '…';
+        }
+
+        return $title;
     }
 
     private static function clean_article_html(string $html): string
