@@ -357,8 +357,8 @@ final class MAIE_Generator
         }
 
         if ($rss_pack !== '') {
-            // יש ידיעות RSS — AI בוחר מהן; web_search לאימות בלבד
-            $web_search_instruction = 'ידיעות RSS עדכניות סופקו לך למטה. בחר את הנושא הטוב ביותר מתוך הרשימה. אל תחפש נושאים חדשים ברשת — השתמש בחיפוש רשת רק אם נדרש אימות נקודת עובדה ספציפית.';
+            // יש ידיעות RSS — AI בוחר מהן ואז מרחיב עם web_search
+            $web_search_instruction = 'ידיעות RSS עדכניות סופקו לך למטה. בחר את הנושא הטוב ביותר. לאחר הבחירה, השתמש בחיפוש רשת כדי לאסוף עובדות מלאות על אותו נושא: ציטוטים ישירים, פרטים ספציפיים, עמדות הצדדים, נתונים ורקע — כל מה שיאפשר כתיבת כתבה מעמיקה ומפורטת. הכנס את כל העובדות שאספת לשדה facts.';
         } elseif ($use_web_search) {
             // אין RSS — חיפוש רשת כגיבוי
             $web_search_instruction = "לא נמצאו ידיעות RSS. בצע חיפוש אינטרנט מקיף על נושאי הקטגוריה. סרוק אתרי חדשות ישראלים ובינלאומיים. בחר את ההתפתחות הכי עדכנית שמצאת. דווח בשדה estimated_event_age_hours כמה שעות עברו מאז פורסמה הידיעה הספציפית שבחרת. מצא לפחות 2 מקורות.";
@@ -557,6 +557,7 @@ PROMPT;
             'model' => self::effective_text_model($profile, $settings),
             'schema_name' => 'maie_article',
             'reasoning_effort' => 'medium',
+            'max_output_tokens' => 16000,
         ]);
     }
 
@@ -585,6 +586,7 @@ PROMPT;
             'model' => self::effective_qa_model($profile, $settings),
             'schema_name' => 'maie_editorial_review',
             'reasoning_effort' => 'medium',
+            'max_output_tokens' => 16000,
         ]);
     }
 

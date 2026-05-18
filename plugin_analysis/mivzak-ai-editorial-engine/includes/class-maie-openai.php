@@ -27,14 +27,16 @@ final class MAIE_OpenAI
             $tools[] = ['type' => 'web_search_preview'];
         }
 
+        $max_tokens = isset($options['max_output_tokens']) ? (int) $options['max_output_tokens'] : 4096;
         $payload = [
-            'model' => $model,
-            'input' => $prompt,
-            'store' => false,
-            'text' => [
+            'model'             => $model,
+            'input'             => $prompt,
+            'store'             => false,
+            'max_output_tokens' => $max_tokens,
+            'text'              => [
                 'format' => [
-                    'type' => 'json_schema',
-                    'name' => sanitize_key((string) ($options['schema_name'] ?? 'maie_response')),
+                    'type'   => 'json_schema',
+                    'name'   => sanitize_key((string) ($options['schema_name'] ?? 'maie_response')),
                     'strict' => true,
                     'schema' => $schema,
                 ],
