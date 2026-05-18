@@ -41,6 +41,7 @@ final class MAIE_Install
             self::create_tables();
             self::ensure_settings();
             self::seed_profiles();
+            self::sync_blueprint_fields();
             self::reschedule_cron();
             update_option('maie_db_version', MAIE_DB_VERSION, false);
         }
@@ -236,6 +237,31 @@ final class MAIE_Install
             }
 
             MAIE_DB::insert_profile($profile);
+        }
+    }
+
+    // מסנכרן שדות blueprint לפרופילים קיימים: research_brief, preferred_domains, topic_keywords.
+    // רץ בכל שדרוג גרסה כדי שתיקוני prompt ומקורות יחולו גם על פרופילים ישנים.
+    public static function sync_blueprint_fields(): void
+    {
+        foreach (MAIE_Prompts::default_profile_blueprints() as $blueprint) {
+            $name = (string) ($blueprint['category_name'] ?? '');
+            if ($name === '') {
+                continue;
+            }
+            $existing = MAIE_DB::get_profile_by_category_name($name);
+            if (!$existing) {
+                continue;
+            }
+            $mode = sanitize_key((string) ($blueprint['content_mode'] ?? 'news'));
+            $focus = (string) ($blueprint['research_focus'] ?? '');
+            MAIE_DB::update_profile((int) $existing['id'], [
+                'research_brief'   => MAIE_Prompts::research_brief($name, $mode, $focus),
+                'preferred_domains' => (string) ($blueprint['preferred_domains'] ?? ''),
+                'topic_keywords'   => (string) ($blueprint['topic_keywords'] ?? ''),
+                'title_prompt'     => MAIE_Prompts::title_prompt($name, $mode),
+                'article_prompt'   => MAIE_Prompts::article_prompt($name, $mode),
+            ]);
         }
     }
 

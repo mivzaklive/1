@@ -3,7 +3,7 @@
  * Plugin Name: מנוע כתבות AI – מבזק לייב
  * Plugin URI: https://www.mivzaklive.co.il/
  * Description: מנוע עריכה ויצירת כתבות אוטומטי לפי קטגוריות, כולל מחקר רשת, כתיבה עיתונאית, תמונה ראשית ובקרת איכות.
- * Version: 1.1.15
+ * Version: 1.1.16
  * Author: MivzakLive
  * Author URI: https://www.mivzaklive.co.il/
  * Text Domain: mivzak-ai-editorial-engine
@@ -15,11 +15,11 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MAIE_VERSION', '1.1.15');
+define('MAIE_VERSION', '1.1.16');
 define('MAIE_PLUGIN_FILE', __FILE__);
 define('MAIE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MAIE_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('MAIE_DB_VERSION', '1.1.0');
+define('MAIE_DB_VERSION', '1.1.1');
 
 require_once MAIE_PLUGIN_DIR . 'includes/class-maie-db.php';
 require_once MAIE_PLUGIN_DIR . 'includes/class-maie-options.php';

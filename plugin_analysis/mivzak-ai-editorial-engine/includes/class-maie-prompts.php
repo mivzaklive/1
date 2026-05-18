@@ -274,9 +274,9 @@ final class MAIE_Prompts
                 'generation_interval_minutes' => 180,
                 'max_posts_per_day' => 3,
                 'prefer_israel' => 1,
-                'preferred_domains' => "reuters.com, apnews.com, bbc.com, france24.com, iaea.org, state.gov, whitehouse.gov",
-                'topic_keywords' => "איראן, גרעין, משמרות המהפכה, טהרן, סנקציות, טראמפ, ישראל, ארה\"ב, טילים, כטב\"מים",
-                'research_focus' => 'בחר התפתחות עדכנית הנוגעת לאיראן — כל אירוע, הצהרה, מהלך, עסקה, סנקציה, פגישה או עדכון מצב שיש לו ערך חדשותי. דגש על סוגיית הגרעין, יחסי איראן-ישראל, יחסי איראן-ארה״ב, שלוחות אזוריות, פוליטיקה פנימית או איום ביטחוני. אין לדרוש אירוע "דרמטי" — גם התפתחות משמעותית רגילה מספיקה.',
+                'preferred_domains' => "ynet.co.il, n12.co.il, kan.org.il, timesofisrael.com, haaretz.com, maariv.co.il, israelhayom.co.il, reuters.com, apnews.com, bbc.com, france24.com, iaea.org, iranintl.com, irna.ir, tasnimnews.com, farsnews.ir, al-monitor.com",
+                'topic_keywords' => "איראן, גרעין, העשרת אורניום, משמרות המהפכה, טהרן, סנקציות, טראמפ, ישראל, ארה\"ב, טילים, כטב\"מים, משא ומתן גרעיני, הסכם גרעין, עומאן, וויטקוף, עראקצ'י, פצשקיאן, חמינאי",
+                'research_focus' => 'בחר את ההתפתחות הכי עדכנית שמצאת בנושא איראן — כל אירוע, הצהרה, מהלך, עסקה, סנקציה, פגישה, עדכון שיחות, הצהרת בכיר או דיווח חדשותי שיש לו ערך ציבורי. דגש על גרעין, יחסי איראן-ישראל, יחסי איראן-ארה״ב, שלוחות אזוריות, פוליטיקה פנימית או מצב ביטחוני. כל עדכון משמעותי מספיק — אין לדרוש אירוע "דרמטי". בחר ואל תדלג.',
             ],
             [
                 'category_name' => 'לבנון',
