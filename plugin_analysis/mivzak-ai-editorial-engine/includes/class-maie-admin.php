@@ -405,9 +405,11 @@ final class MAIE_Admin
     public static function render_logs(): void
     {
         self::guard();
-        $jobs = MAIE_DB::get_jobs(120);
         $focused_job_id = absint($_GET['job_id'] ?? 0);
         $cleanup_url = wp_nonce_url(admin_url('admin-post.php?action=maie_cleanup_logs'), 'maie_cleanup_logs');
+
+        $log_filters = self::get_log_filters(wp_unslash($_GET));
+        $jobs = MAIE_DB::get_jobs(200, $log_filters);
 
         echo '<div class="wrap maie-wrap" dir="rtl">';
         echo '<h1>לוגים ומשימות <a class="page-title-action" href="' . esc_url($cleanup_url) . '" onclick="return confirm(\'למחוק משימות ישנות?\')">נקה לוגים ישנים</a></h1>';
@@ -416,8 +418,63 @@ final class MAIE_Admin
         if ($focused_job_id > 0) {
             self::render_job_progress_panel($focused_job_id);
         }
+        self::render_log_filters($log_filters);
         self::render_jobs_table($jobs, true);
         echo '</div>';
+    }
+
+    private static function get_log_filters(array $raw): array
+    {
+        $filters = [];
+        $status = sanitize_key((string) ($raw['log_status'] ?? ''));
+        if ($status !== '' && in_array($status, ['queued', 'running', 'completed', 'failed', 'skipped'], true)) {
+            $filters['status'] = $status;
+        }
+        $profile_id = absint($raw['log_profile'] ?? 0);
+        if ($profile_id > 0) {
+            $filters['profile_id'] = $profile_id;
+        }
+        $filters['_raw'] = [
+            'log_status' => $status,
+            'log_profile' => $profile_id,
+        ];
+        return $filters;
+    }
+
+    private static function render_log_filters(array $filters): void
+    {
+        $raw = is_array($filters['_raw'] ?? null) ? $filters['_raw'] : [];
+        $current_status = (string) ($raw['log_status'] ?? '');
+        $current_profile = absint($raw['log_profile'] ?? 0);
+        $profiles = MAIE_DB::get_profiles();
+        $statuses = [
+            '' => 'כל הסטטוסים',
+            'running' => 'רץ כעת',
+            'queued' => 'בתור',
+            'completed' => 'הושלם',
+            'failed' => 'נכשל',
+            'skipped' => 'דולג',
+        ];
+
+        echo '<form method="get" class="maie-filter-form">';
+        echo '<input type="hidden" name="page" value="maie-logs">';
+        echo '<div class="maie-filter-grid">';
+        echo '<div class="maie-field"><label for="log_status">סטטוס משימה</label><select id="log_status" name="log_status">';
+        foreach ($statuses as $value => $label) {
+            echo '<option value="' . esc_attr($value) . '" ' . selected($current_status, $value, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select></div>';
+        echo '<div class="maie-field"><label for="log_profile">קטגוריה / פרופיל</label><select id="log_profile" name="log_profile">';
+        echo '<option value="0">כל הפרופילים</option>';
+        foreach ($profiles as $profile) {
+            $pid = absint($profile['id'] ?? 0);
+            echo '<option value="' . esc_attr((string) $pid) . '" ' . selected($current_profile, $pid, false) . '>' . esc_html((string) ($profile['category_name'] ?? '')) . '</option>';
+        }
+        echo '</select></div>';
+        echo '<div class="maie-field maie-filter-submit"><label>&nbsp;</label><button class="button button-primary">סנן</button></div>';
+        echo '</div>';
+        echo '<p class="maie-filter-reset"><a class="button button-secondary" href="' . esc_url(admin_url('admin.php?page=maie-logs')) . '">איפוס סינון</a></p>';
+        echo '</form>';
     }
 
 

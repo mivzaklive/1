@@ -458,12 +458,35 @@ final class MAIE_DB
         return $updated;
     }
 
-    public static function get_jobs(int $limit = 50): array
+    public static function get_jobs(int $limit = 50, array $filters = []): array
     {
         global $wpdb;
         $table = self::jobs_table();
         $limit = max(1, min(500, $limit));
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} ORDER BY id DESC LIMIT %d", $limit), ARRAY_A);
+
+        $where = [];
+        $params = [];
+
+        $status = sanitize_key((string) ($filters['status'] ?? ''));
+        if ($status !== '' && $status !== 'all') {
+            $where[] = 'status = %s';
+            $params[] = $status;
+        }
+
+        $profile_id = absint($filters['profile_id'] ?? 0);
+        if ($profile_id > 0) {
+            $where[] = 'profile_id = %d';
+            $params[] = $profile_id;
+        }
+
+        $sql = 'SELECT * FROM ' . $table;
+        if ($where) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $sql .= ' ORDER BY id DESC LIMIT %d';
+        $params[] = $limit;
+
+        $rows = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
         return is_array($rows) ? $rows : [];
     }
 
