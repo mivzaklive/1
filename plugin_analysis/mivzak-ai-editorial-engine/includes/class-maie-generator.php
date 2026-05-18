@@ -341,16 +341,7 @@ final class MAIE_Generator
         $settings = MAIE_DB::get_settings();
         $use_web_search = self::profile_web_search_enabled($profile, $settings);
 
-        // תאריך נוכחי — חיוני לפרופילים ללא חיפוש רשת (אוכל, אורח חיים, עונתי)
-        // כדי שהמודל לא יציע מתכוני חורף בקיץ, מנות לחגים שעברו וכו'
         $current_date_label = wp_date('d/m/Y') . ' (' . wp_date('F Y') . ')';
-
-        $web_search_instruction = $use_web_search
-            ? "בצע עכשיו חיפוש אינטרנט מקיף על נושאי הקטגוריה. סרוק אתרי חדשות ישראלים ובינלאומיים, כולל אתרים מקומיים הרלוונטיים לקטגוריה (אתרים איראניים, ערביים, אמריקאיים וכו' בהתאם לנושא). בחר את ההתפתחות הכי עדכנית שמצאת. אל תקבע בעצמך אם האירוע מספיק חדש — פשוט דווח כמה שעות עברו מאז פורסמה הידיעה הספציפית שבחרת (השדה estimated_event_age_hours). המערכת תסנן לפי הגיל בשלב הבא. מצא לפחות 2 מקורות עצמאיים לאותה התפתחות והוסף אותם ל-source_notes."
-            : "אין חיפוש רשת בפרופיל זה. התאריך הנוכחי הוא {$current_date_label}. בחר נושא שמתאים לעונה ולחודש הנוכחי בדיוק. אין לבחור מנות, נושאים או חגים שאינם מתאימים לתקופה הנוכחית בישראל (למשל: אין להציע מרקי חורף בקיץ, אין להציע מנות לחגי תשרי שלא בעונתם, אין להציע בישולי חג כשאין חג בקרוב). בחר רק נושא שאינו תלוי בעובדות זמן-אמת.";
-
-        $recent_titles = self::recent_titles_for_profile($profile);
-        $recent_job_topics = MAIE_DB::recent_job_topics(absint($profile['id'] ?? 0));
         $window = max(1, absint($profile['search_window_hours'] ?? 12));
         $keywords = trim((string) ($profile['topic_keywords'] ?? ''));
         $preferred_domains = trim((string) ($profile['preferred_domains'] ?? ''));
@@ -358,6 +349,29 @@ final class MAIE_Generator
         $prefer_israel = !empty($profile['prefer_israel']) ? 'כן' : 'לא';
         $mode = sanitize_key((string) ($profile['content_mode'] ?? 'news'));
         $brief = (string) ($profile['research_brief'] ?? '');
+
+        // שלב RSS: אוסף ידיעות עדכניות ממקורות ידועים לפני שפונים ל-AI
+        $rss_pack = '';
+        if ($use_web_search) {
+            $rss_pack = self::fetch_rss_news_pack($profile, $window);
+        }
+
+        if ($rss_pack !== '') {
+            // יש ידיעות RSS — AI בוחר מהן; web_search לאימות בלבד
+            $web_search_instruction = 'ידיעות RSS עדכניות סופקו לך למטה. בחר את הנושא הטוב ביותר מתוך הרשימה. אל תחפש נושאים חדשים ברשת — השתמש בחיפוש רשת רק אם נדרש אימות נקודת עובדה ספציפית.';
+        } elseif ($use_web_search) {
+            // אין RSS — חיפוש רשת כגיבוי
+            $web_search_instruction = "לא נמצאו ידיעות RSS. בצע חיפוש אינטרנט מקיף על נושאי הקטגוריה. סרוק אתרי חדשות ישראלים ובינלאומיים. בחר את ההתפתחות הכי עדכנית שמצאת. דווח בשדה estimated_event_age_hours כמה שעות עברו מאז פורסמה הידיעה הספציפית שבחרת. מצא לפחות 2 מקורות.";
+        } else {
+            $web_search_instruction = "אין חיפוש רשת בפרופיל זה. התאריך הנוכחי הוא {$current_date_label}. בחר נושא שמתאים לעונה ולחודש הנוכחי בדיוק. אין לבחור מנות, נושאים או חגים שאינם מתאימים לתקופה הנוכחית בישראל (למשל: אין להציע מרקי חורף בקיץ, אין להציע מנות לחגי תשרי שלא בעונתם, אין להציע בישולי חג כשאין חג בקרוב). בחר רק נושא שאינו תלוי בעובדות זמן-אמת.";
+        }
+
+        $recent_titles = self::recent_titles_for_profile($profile);
+        $recent_job_topics = MAIE_DB::recent_job_topics(absint($profile['id'] ?? 0));
+
+        $rss_section = $rss_pack !== ''
+            ? "\nידיעות עדכניות ממקורות RSS (ממוינות מהחדש לישן):\n{$rss_pack}\n"
+            : '';
 
         $prompt = <<<PROMPT
 {$brief}
@@ -368,20 +382,19 @@ final class MAIE_Generator
 - סוג תוכן: {$mode}
 - חלון זמן נדרש: {$window} שעות
 - עדיפות לזיקה לישראל: {$prefer_israel}
-- מקורות מועדפים: {$preferred_domains}
 - מקורות חסומים: {$blocked_domains}
 - מילות מפתח ונושאי יעד:
 {$keywords}
-
+{$rss_section}
 כותרות שפורסמו או נוצרו לאחרונה ויש להימנע מנושאים דומים להן:
 {$recent_titles}
 {$recent_job_topics}
 
 הוראות קריטיות:
 1. {$web_search_instruction}
-2. עבור חדשות: בחר את הפיתוח הכי עדכני שמצאת. עבור סיפורים מתמשכים (מלחמות, משברים, משא ומתן) — בחר את הידיעה הספציפית החדשה ביותר שפורסמה, לא את הניתוח הרקעי הישן.
-3. השדה estimated_event_age_hours חייב לשקף את מספר השעות מאז פורסמה הידיעה הספציפית שבחרת — לא גיל הסיפור הרחב. לדוגמה: בחרת ידיעה שיצאה לפני 4 שעות — דווח 4. עבור סיפור מתמשך שיש בו פיתוח חדש שפורסם לפני 8 שעות — דווח 8, לא 192.
-4. הוסף את שמות המקורות שמצאת ל-source_notes (מינימום 2 מקורות עצמאיים רצוי).
+2. עבור חדשות: בחר את הפיתוח הכי עדכני. עבור סיפורים מתמשכים — בחר את הידיעה הספציפית החדשה ביותר, לא ניתוח רקעי ישן.
+3. estimated_event_age_hours: דווח מספר השעות מאז פורסמה הידיעה הספציפית (לא גיל הסיפור הרחב). אם RSS סיפק תאריך — השתמש בו.
+4. הוסף את שמות המקורות ל-source_notes.
 5. החזר חבילת עובדות מסודרת ומאומתת בלבד. אל תכתוב עדיין כתבה מלאה.
 PROMPT;
 
@@ -391,6 +404,131 @@ PROMPT;
             'schema_name' => 'maie_research_topic',
             'reasoning_effort' => 'medium',
         ]);
+    }
+
+    // מביא ידיעות עדכניות מ-RSS feeds: Google News + מקורות ייעודיים לפי preferred_domains
+    private static function fetch_rss_news_pack(array $profile, int $window): string
+    {
+        if (!function_exists('fetch_feed')) {
+            include_once ABSPATH . WPINC . '/feed.php';
+        }
+
+        $cutoff = time() - ($window * 6 * HOUR_IN_SECONDS); // 6× חלון = buffer נדיב
+        $keywords = trim((string) ($profile['topic_keywords'] ?? ''));
+        $category = trim((string) ($profile['category_name'] ?? ''));
+
+        $urls = self::build_rss_urls($profile, $keywords, $category);
+
+        $items = [];
+        foreach ($urls as $url) {
+            $feed = @fetch_feed($url);
+            if (is_wp_error($feed) || !($feed instanceof SimplePie)) {
+                continue;
+            }
+            $count = min($feed->get_item_quantity(25), 25);
+            foreach ($feed->get_items(0, $count) as $feed_item) {
+                $ts = (int) $feed_item->get_date('U');
+                if ($ts && $ts < $cutoff) {
+                    continue;
+                }
+                $title = wp_strip_all_tags((string) ($feed_item->get_title() ?? ''));
+                if ($title === '') {
+                    continue;
+                }
+                $summary = wp_strip_all_tags((string) ($feed_item->get_description() ?? ''));
+                $host = parse_url((string) ($feed_item->get_permalink() ?? $url), PHP_URL_HOST) ?: $url;
+                $items[] = [
+                    'title'     => $title,
+                    'summary'   => mb_substr($summary, 0, 400, 'UTF-8'),
+                    'source'    => $host,
+                    'timestamp' => $ts ?: 0,
+                ];
+            }
+        }
+
+        if (empty($items)) {
+            return '';
+        }
+
+        // מיון מהחדש לישן, הסרת כפילויות
+        usort($items, static fn($a, $b) => $b['timestamp'] <=> $a['timestamp']);
+        $unique = [];
+        foreach ($items as $item) {
+            $is_dup = false;
+            foreach ($unique as $ex) {
+                similar_text(mb_strtolower($item['title'], 'UTF-8'), mb_strtolower($ex['title'], 'UTF-8'), $pct);
+                if ($pct > 72) {
+                    $is_dup = true;
+                    break;
+                }
+            }
+            if (!$is_dup) {
+                $unique[] = $item;
+            }
+            if (count($unique) >= 20) {
+                break;
+            }
+        }
+
+        $lines = [];
+        foreach ($unique as $i => $item) {
+            $date_str = $item['timestamp'] ? wp_date('d/m/Y H:i', $item['timestamp']) : '?';
+            $line = ($i + 1) . ". [{$date_str}] {$item['source']}: {$item['title']}";
+            if ($item['summary'] !== '') {
+                $line .= "\n   " . $item['summary'];
+            }
+            $lines[] = $line;
+        }
+
+        return implode("\n\n", $lines);
+    }
+
+    // ממפה preferred_domains לכתובות RSS ידועות + Google News לפי מילות מפתח
+    private static function build_rss_urls(array $profile, string $keywords, string $category): array
+    {
+        $urls = [];
+
+        // Google News RSS לפי מילת המפתח הראשונה + שם הקטגוריה
+        $search_terms = array_filter(array_map('trim', [
+            strtok($keywords, ',') ?: '',
+            $category,
+        ]));
+        foreach (array_unique($search_terms) as $term) {
+            if ($term === '') {
+                continue;
+            }
+            $q = urlencode($term);
+            $urls[] = "https://news.google.com/rss/search?q={$q}&hl=he&gl=IL&ceid=IL:he";
+            $urls[] = "https://news.google.com/rss/search?q={$q}&hl=en&gl=US&ceid=US:en";
+        }
+
+        // RSS ידועים לפי דומיין
+        static $domain_rss = [
+            'ynet.co.il'        => 'https://www.ynet.co.il/Integration/StoryRss2.xml',
+            'n12.co.il'         => 'https://www.mako.co.il/rss/news-military.xml',
+            'kan.org.il'        => 'https://www.kan.org.il/rss/',
+            'timesofisrael.com' => 'https://www.timesofisrael.com/feed/',
+            'haaretz.com'       => 'https://www.haaretz.co.il/rss',
+            'maariv.co.il'      => 'https://www.maariv.co.il/rss/rss.aspx?id=1',
+            'israelhayom.co.il' => 'https://www.israelhayom.co.il/rss.xml',
+            'reuters.com'       => 'https://feeds.reuters.com/reuters/worldnews',
+            'apnews.com'        => 'https://apnews.com/rss.atom',
+            'bbc.com'           => 'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml',
+            'france24.com'      => 'https://www.france24.com/en/rss',
+            'iranintl.com'      => 'https://www.iranintl.com/en/rss.xml',
+            'al-monitor.com'    => 'https://www.al-monitor.com/rss',
+            'jpost.com'         => 'https://www.jpost.com/rss/rssfeedsfrontpage.aspx',
+            'walla.co.il'       => 'https://rss.walla.co.il/feed/1',
+        ];
+
+        $preferred = array_map('trim', explode(',', (string) ($profile['preferred_domains'] ?? '')));
+        foreach ($preferred as $domain) {
+            if (isset($domain_rss[$domain])) {
+                $urls[] = $domain_rss[$domain];
+            }
+        }
+
+        return array_unique($urls);
     }
 
     private static function generate_title(MAIE_OpenAI $client, array $profile, string $facts_package): array
